@@ -2212,15 +2212,16 @@ CameraService::BasicClient::~BasicClient() {
 }
 
 binder::Status CameraService::BasicClient::disconnect() {
-    sp<ICameraMotor> motor_service = ICameraMotor::getService();
-    if (motor_service != nullptr) {
-        motor_service->onDisconnect(std::stoi(mCameraIdStr.string()));
-    }
     binder::Status res = Status::ok();
     if (mDisconnected) {
         return res;
     }
     mDisconnected = true;
+
+    sp<ICameraMotor> motor_service = ICameraMotor::getService();
+    if (motor_service != nullptr) {
+        motor_service->onDisconnect(std::stoi(mCameraIdStr.string()));
+    }
 
     sCameraService->removeByClient(this);
     sCameraService->logDisconnected(mCameraIdStr, mClientPid,
