@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7fa37115_31a6bdab",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1000021
+      },
+      "writtenOn": "2021-05-07T16:27:28Z",
+      "side": 1,
+      "message": "This commit needed mostly for those who ship prebuilt vendor camera in rom, tested, working for Xiaomi.",
+      "revId": "be276705579f1e673c1572d558dc9d7cfb7b7c36",
+      "serverId": "b7386340-edb3-408c-9cac-98e148952b30"
+    }
+  ]
+}
