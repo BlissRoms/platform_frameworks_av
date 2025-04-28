@@ -133,7 +133,6 @@ cc_library {
 
     defaults: [
         "libcameraservice_deps",
-        "libcameraservice_ext_lib_defaults",
     ],
     // Camera service source
 
@@ -267,6 +266,13 @@ cc_library {
         true: ["-DCAMERA_NEEDS_CLIENT_INFO_LIB_OPLUS"],
         false: [],
         default: [],
+    }) + select(soong_config_variable("libcameraservice", "ext_lib"), {
+        any @ flag_val: ["-DTARGET_PROVIDES_CAMERA_PROVIDER_EXT_LIB"],
+        default: [],
+    }),
+    whole_static_libs: select(soong_config_variable("libcameraservice", "ext_lib"), {
+        any @ flag_val: [flag_val],
+        default: ["libcameraservice_ext_lib"],
     }),
 }
 
