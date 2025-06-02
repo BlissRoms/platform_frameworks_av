@@ -246,7 +246,7 @@ cc_library {
         any @ flag_val: ["-DTARGET_PROVIDES_CAMERA_PROVIDER_EXT_LIB"],
         default: [],
     })+ select(soong_config_variable("camera", "package_name"), {
-        any @ flag_val: ["-DTARGET_CAMERA_PACKAGE_NAME=" + flag_val],
+        any @ flag_val: ["-DCAMERA_PACKAGE_NAME=\"" + flag_val + "\""],
         default: [],
     }),
     whole_static_libs: select(soong_config_variable("libcameraservice", "ext_lib"), {
