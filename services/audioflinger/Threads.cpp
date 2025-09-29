@@ -4051,7 +4051,9 @@ void PlaybackThread::detachAuxEffect_l(int effectId)
 bool PlaybackThread::threadLoop()
 NO_THREAD_SAFETY_ANALYSIS  // manual locking of AudioFlinger
 {
-    if (mType == SPATIALIZER) {
+    // Check the flag and not the mixer type to also boost the duplicating thread priority
+    // when one of the outputs is a spatializer thread.
+    if (mOutput != nullptr && ((mOutput->flags & AUDIO_OUTPUT_FLAG_SPATIALIZER) != 0)) {
         const pid_t tid = getTid();
         if (tid == -1) {  // odd: we are here, we must be a running thread.
             ALOGW("%s: Cannot update Spatializer mixer thread priority, no tid", __func__);
@@ -7926,6 +7928,10 @@ void DuplicatingThread::threadLoop_sleepTime()
 ssize_t DuplicatingThread::threadLoop_write()
 {
     ATRACE_BEGIN("write");
+    {
+        audio_utils::lock_guard _l(mutex());
+        updateWaitTime_l();
+    }
     for (size_t i = 0; i < outputTracks.size(); i++) {
         const ssize_t actualWritten = outputTracks[i]->write(mSinkBuffer, writeFrames);
 
@@ -8082,11 +8088,20 @@ void DuplicatingThread::removeOutputTrack(IAfPlaybackThread* thread)
 void DuplicatingThread::updateWaitTime_l()
 {
     // Initialize mWaitTimeMs according to the mixer buffer size.
-    mWaitTimeMs = mNormalFrameCount * 2 * 1000 / mSampleRate;
+
+    mWaitTimeMs = mNormalFrameCount * 1000 / mSampleRate;
     for (size_t i = 0; i < mOutputTracks.size(); i++) {
         const auto strong = mOutputTracks[i]->thread().promote();
         if (strong != 0) {
-            uint32_t waitTimeMs = (strong->frameCount() * 2 * 1000) / strong->sampleRate();
+            size_t frames = strong->frameCount();
+            // Do not wait in OutputTrack::write() if one of the tracks does not have enough frames
+            // ready to be mixed
+            if (mOutputTracks[i]->isActive()
+                    && mOutputTracks[i]->framesReady() < sourceFramesNeededWithTimestretch(
+                   mOutputTracks[i]->sampleRate(), frames, strong->sampleRate(), 1.0f /*speed*/)) {
+                frames = 0;
+            }
+            uint32_t waitTimeMs = (frames * 1000) / strong->sampleRate();
             if (waitTimeMs < mWaitTimeMs) {
                 mWaitTimeMs = waitTimeMs;
             }
@@ -8104,8 +8119,7 @@ bool DuplicatingThread::outputsReady()
             return false;
         }
         IAfPlaybackThread* const playbackThread = thread->asIAfPlaybackThread().get();
-        // see note at standby() declaration
-        if (playbackThread->inStandby() && !playbackThread->isSuspended()) {
+        if (!playbackThread->waitForHalStart(0/* timeoutMs */)) {
             ALOGV("DuplicatingThread output track %p on thread %p Not Ready", outputTracks[i].get(),
                     thread.get());
             return false;
